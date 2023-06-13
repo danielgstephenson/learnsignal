@@ -1,0 +1,54 @@
+* { 
+  margin: 0; 
+  padding: 0; 
+  box-sizing: border-box; 
+  text-align: center;
+}
+body { 
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden; 
+  align-items: center;
+}
+#joinDiv {
+  padding-top: 5vh;
+}
+.join {
+  font-size: 3vw;
+  padding: 1vh;
+}
+#instructionsDiv {
+  display: none;
+  text-align: justify;      
+  font: 3vmin monospace;    
+  border: 0;
+  padding-top: 20;
+  padding-left: 100;
+  padding-right: 100;
+  margin: 0;
+  float: right;  
+}
+#interfaceDiv {
+  display: none; /* flex; */
+  justify-content: center;
+  height: 100%;
+  border: 1px solid hsl(180, 10%, 10%);
+}
+#canvasDiv {
+  border: 0px;
+}
+canvas {
+  border: 1px solid hsl(180, 10%, 10%);
+}
+#leftDiv {
+  border: 1px solid hsl(180, 10%, 10%);
+  padding: 1vmin;
+  font-size: 3vw;
+}
+#rightDiv {
+  border: 1px solid hsl(180, 10%, 10%);
+  padding: 1vmin;
+  font-size: 3vw;
+}
