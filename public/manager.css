@@ -1,0 +1,52 @@
+* { 
+  margin: 0; 
+  padding: 0; 
+  box-sizing: border-box; 
+  text-align: center;
+}
+body { 
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden; 
+  align-items: center;
+}
+#connectingDiv {
+  display: block;
+  font: 5vw monospace;
+  padding-top: 30vh;
+}
+#interfaceDiv {
+  display: none;
+  justify-content: center;
+  padding-top: 2vh;
+  font: 5vw monospace;
+  height: 100%;
+  border: 1px solid hsl(180, 10%, 10%);
+}
+#stateDiv {
+  font: 1.5vw monospace;
+}
+#subjectsTable {
+  height: fit-content;
+  align-items: top;
+  border: 0px solid;
+  padding-right: 3vw;
+}
+button {
+  font-size: 1.5vw;
+  padding: 0.1vw;
+  margin: 0.1vw;
+}
+tr {
+  height: fit-content;
+  outline: 0px solid;
+}
+td {
+  font: 1.2vw monospace;
+  padding-left: 0.5vw;
+  padding-right: 0.5vw;
+  width: fit-content;
+  height: fit-content;
+}

@@ -19,6 +19,11 @@ body {
   font-size: 3vw;
   padding: 1vh;
 }
+#waitDiv {
+  display: none;
+  font: 5vw monospace;
+  padding-top: 30vh;
+}
 #instructionsDiv {
   display: none;
   text-align: justify;      
@@ -36,19 +41,28 @@ body {
   height: 100%;
   border: 1px solid hsl(180, 10%, 10%);
 }
-#canvasDiv {
+#centerDiv {
   border: 0px;
 }
 canvas {
   border: 1px solid hsl(180, 10%, 10%);
+  width: 85vh;
+  height: 85vh;
 }
 #leftDiv {
   border: 1px solid hsl(180, 10%, 10%);
   padding: 1vmin;
-  font-size: 3vw;
+  width: 25vh;
+  font-size: 2.5vh;
 }
 #rightDiv {
   border: 1px solid hsl(180, 10%, 10%);
   padding: 1vmin;
-  font-size: 3vw;
+  width: 25vh;
+  font-size: 2.5vh;
+}
+#belowDiv {
+  border: 1px solid hsl(180, 10%, 10%);
+  padding: 1vmin;
+  font-size: 2.5vh;
 }
