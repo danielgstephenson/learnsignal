@@ -42,6 +42,7 @@ function updateSubjectsTable () {
   tableString += '<tr>'
   tableString += '<td>id</td>'
   tableString += '<td>role</td>'
+  tableString += '<td>type</td>'
   tableString += '<td>strategy</td>'
   tableString += '<td>payoff</td>'
   tableString += '</tr>'
@@ -49,7 +50,8 @@ function updateSubjectsTable () {
     tableString += '<tr>'
     tableString += `<td>${subject.id}</td>`
     tableString += `<td>${subject.role.substr(0, 1)}</td>`
-    tableString += `<td>${subject.strategy[0].toFixed(2)} ${subject.strategy[1].toFixed(2)}</td>`
+    tableString += `<td>${subject.type}</td>`
+    tableString += `<td>${subject.strategy.toFixed(2)}</td>`
     tableString += `<td>${subject.payoff.toFixed(2)}</td>`
     tableString += '</tr>'
   })

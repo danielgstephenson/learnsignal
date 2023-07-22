@@ -4,12 +4,6 @@
     <link rel="stylesheet" href="client.css">
   </head>
   <body>
-    <div id="joinDiv" class="join">
-      Enter Client ID:<br><br>
-      <input id="idInput" type="number" value="" class="join" autocomplete="off" min="1" step="1">
-      <br><br>
-      <button id="idSubmit" onclick="join()" class="join">Submit</button>
-    </div>
     <div id="instructionsDiv">
       Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
     </div>
@@ -17,12 +11,16 @@
       Please Wait
     </div>
     <div id="interfaceDiv">
-      <div id="leftDiv">Left</div>
+      <div id="leftDiv"></div>
       <div id="centerDiv" >
+        <div id="aboveDiv">Above</div>
         <canvas id="canvas" width="600" height="600"></canvas>
-        <div id="belowDiv">Below</div>
+        <div id="belowDiv">
+          <div id="belowLeftDiv">Below Left</div>
+          <div id="belowRightDiv">Below Right</div>
+        </div>
       </div>
-      <div id="rightDiv">Right</div>
+      <div id="rightDiv"></div>
     </div>
     <script src="client.js" type="module"></script>
     <script src="payoffs.js" type="module"></script>

@@ -44,25 +44,53 @@ body {
 #centerDiv {
   border: 0px;
 }
+#aboveDiv {
+  display: flex;
+  justify-content: center;
+  border: 1px solid hsl(180, 10%, 10%);
+  height: 7vh;
+  padding: 1vmin;
+  font-size: 3vh; 
+}
 canvas {
   border: 1px solid hsl(180, 10%, 10%);
-  width: 85vh;
-  height: 85vh;
+  width: 80vh;
+  height: 80vh;
+}
+#belowDiv {
+  display: flex;
+  justify-content: center;
+  border: 0px solid hsl(180, 10%, 10%);
+  padding: 0vmin;
+  font-size: 2.5vh;
+}
+#belowLeftDiv {
+  border: 1px solid hsl(180, 10%, 10%);
+  padding: 1vmin;
+  font-size: 2.5vh;
+  height: 13vh;
+  width: 50%;
+}
+#belowRightDiv {
+  border: 1px solid hsl(180, 10%, 10%);
+  padding: 1vmin;
+  font-size: 2.5h;
+  height: 13vh;
+  width: 50%;
 }
 #leftDiv {
   border: 1px solid hsl(180, 10%, 10%);
-  padding: 1vmin;
-  width: 25vh;
-  font-size: 2.5vh;
+  padding: 0vh;
+  width: 20vh;
+  font-size: 2.3vh;
 }
 #rightDiv {
   border: 1px solid hsl(180, 10%, 10%);
-  padding: 1vmin;
-  width: 25vh;
-  font-size: 2.5vh;
+  padding: 0vh;
+  width: 20vh;
+  font-size: 2.3vh;
 }
-#belowDiv {
-  border: 1px solid hsl(180, 10%, 10%);
-  padding: 1vmin;
-  font-size: 2.5vh;
+span {
+  display: block;
+  margin-bottom: 0.7vw;
 }
