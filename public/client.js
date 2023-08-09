@@ -1,12 +1,14 @@
-import { setTreatment, getReceiverPayoff, getSenderPayoff } from './payoffs.js'
+import { setTreatment, getBuyerPayoff, getProducerPayoff } from './payoffs.js'
 import { io } from './socketIo/socket.io.esm.min.js'
+import getInstructions from './instructions.js'
 const socket = io()
 
 function range (n) { return [...Array(n).keys()] }
 
 const waitDiv = document.getElementById('waitDiv')
 const instructionsDiv = document.getElementById('instructionsDiv')
-const interfaceDiv = document.getElementById('interfaceDiv')
+const gameDiv = document.getElementById('gameDiv')
+const feedbackDiv = document.getElementById('feedbackDiv')
 const canvas = document.getElementById('canvas')
 const context = canvas.getContext('2d')
 const aboveDiv = document.getElementById('aboveDiv')
@@ -17,28 +19,32 @@ const updateInterval = 0.1
 const mouse = { x: 0, y: 0, gx: 0, gy: 0 }
 const graphSize = 80
 const graphOrigin = { x: 13, y: 6 }
-const maxEstimate = 20
+const maxBid = 1
+const capacity = 10
 
 let message = {}
 let state = 'join'
+let practice = true
+let round = 1
+let timer = 0
 let joined = false
 let id = 0
 let treatment = 1
 let role = 'buyer'
 let type = 0
 let showInstructions = false
-let meanCertRates = { 1: 0.5, 2: 0.5 }
-let meanEstimates = { 1: 10, 2: 10 }
-let strategy = Math.random()
-let payoff = 0
-let oldStrategy = 0
+let action = parseFloat(Math.random().toFixed(2))
+let oldAction = 0
+let oldPayoff = 0
+let oldBids = { 1: 0, 2: 0 }
+let oldQuantities = { 1: 0, 2: 0 }
+let periodPayoff = 0
+let maxAction = 1
 let maxPay = 20
 let minPay = 0
 
 document.onmousedown = function (event) {
   console.log(message)
-  console.log('minpay', minPay)
-  console.log('minpay', maxPay)
 }
 
 function join () {
@@ -59,32 +65,44 @@ socket.on('serverUpdateClient', msg => {
   message = msg
   joined = true
   state = msg.state
+  practice = msg.practice
+  timer = msg.timer
   role = msg.role
   type = msg.type
-  meanCertRates = msg.meanCertRates
-  meanEstimates = msg.meanEstimates
   showInstructions = msg.showInstructions
+  round = msg.round
+  timer = msg.timer
   treatment = msg.treatment
-  oldStrategy = msg.oldStrategy
+  oldAction = msg.oldAction
+  oldPayoff = msg.oldPayoff
+  oldBids = msg.oldBids
+  oldQuantities = msg.oldQuantities
+  periodPayoff = msg.periodPayoff
   setTreatment(treatment)
+  maxAction = role === 'buyer' ? maxBid : capacity
+  instructionsDiv.innerHTML = getInstructions()
 })
 
 function update () {
   updateServer()
   waitDiv.style.display = 'none'
   instructionsDiv.style.display = 'none'
-  interfaceDiv.style.display = 'none'
+  gameDiv.style.display = 'none'
+  feedbackDiv.style.display = 'none'
   if (joined && state === 'instructions') {
     if (showInstructions) instructionsDiv.style.display = 'block'
     else waitDiv.style.display = 'block'
   }
-  if (joined && state === 'practice') {
-    interfaceDiv.style.display = 'flex'
+  if (joined && state === 'game') {
+    gameDiv.style.display = 'flex'
+  }
+  if (joined && state === 'feedback') {
+    feedbackDiv.style.display = 'block'
   }
 }
 
 function updateServer () {
-  const msg = { id, strategy }
+  const msg = { id, action }
   socket.emit('clientUpdateServer', msg)
 }
 
@@ -96,32 +114,52 @@ document.onmousemove = function (event) {
   mouse.y = 100 * Math.max(0, Math.min(1, relativeY / rect.height))
   mouse.gx = Math.max(0, Math.min(1, (mouse.x - graphOrigin.x) / graphSize))
   mouse.gy = 1 - Math.max(0, Math.min(1, (mouse.y - graphOrigin.y) / graphSize))
-  const maxStrategy = role === 'receiver' ? maxEstimate : 1
-  strategy = parseFloat(mouse.gx.toFixed(2)) * maxStrategy
+  action = parseFloat(mouse.gx.toFixed(2)) * maxAction
 }
 
-function writeText () {
+function writeGameText () {
   let belowLeftInnerHTML = ''
   let belowRightInnerHTML = ''
   let aboveInnerHTML = ''
-  aboveInnerHTML += `You are a type ${type} ${role}`
-  belowLeftInnerHTML += 'Previous Round<br><span></span>'
-  belowRightInnerHTML += 'Next Round <br><span></span>'
-  if (role === 'receiver') {
-    belowLeftInnerHTML += `Your Estimate: $${oldStrategy.toFixed(2)}<br>`
-    belowLeftInnerHTML += `Your Payoff: $${(10).toFixed(2)}<br>`
-    belowRightInnerHTML += `Your Estimate: $${strategy.toFixed(2)}<br>`
-    belowRightInnerHTML += `Your Payoff: $${payoff.toFixed(2)}<br>`
+  if (role === 'producer') {
+    aboveInnerHTML += `You are Producer ${type}.`
   }
-  if (role === 'sender') {
-    belowLeftInnerHTML += `Your Certification Rate: ${(oldStrategy * 100).toFixed()}% <br>`
-    belowLeftInnerHTML += `Your Payoff: $${(10).toFixed(2)}<br>`
-    belowRightInnerHTML += `Your Certification Rate: ${(strategy * 100).toFixed()}%<br>`
-    belowRightInnerHTML += `Your Payoff: $${payoff.toFixed(2)}<br>`
+  if (role === 'buyer') {
+    aboveInnerHTML += 'You are a Buyer.'
+  }
+  if (round > 1) {
+    if (role === 'buyer') {
+      belowLeftInnerHTML += `Your Bid: $${oldAction.toFixed(2)}<br>`
+      belowRightInnerHTML += `Your Payoff: $${oldPayoff.toFixed(2)}<br>`
+    }
+    if (role === 'producer') {
+      belowLeftInnerHTML += `Your Quantity: ${oldAction.toFixed(1)}<br>`
+      belowRightInnerHTML += `Your Payoff: $${oldPayoff.toFixed(2)}<br>`
+    }
+  } else {
+    belowLeftInnerHTML = 'This is the first round.'
+    const s = Math.ceil(timer) > 1 ? 's' : ''
+    belowRightInnerHTML += `Next round in ${Math.ceil(timer).toFixed(0)} second${s}. <br>`
   }
   belowLeftDiv.innerHTML = belowLeftInnerHTML
   belowRightDiv.innerHTML = belowRightInnerHTML
   aboveDiv.innerHTML = aboveInnerHTML
+}
+
+function writeFeedbackText () {
+  let feedbackInnerHTML = ''
+  if (practice) {
+    feedbackInnerHTML += 'This was a practice period. <br><br>'
+    feedbackInnerHTML += 'It will not effect your final payment. <br> <br>'
+  }
+  feedbackInnerHTML += `In this period, your average payoff was $${periodPayoff.toFixed(2)} <br> <br>`
+  const s = Math.ceil(timer) > 1 ? 's' : ''
+  if (practice) {
+    feedbackInnerHTML += `The instructions will return in ${Math.ceil(timer).toFixed(0)} second${s}. <br>`
+  } else {
+    feedbackInnerHTML += `The next period will begin in ${Math.ceil(timer).toFixed(0)} second${s}. <br>`
+  }
+  feedbackDiv.innerHTML = feedbackInnerHTML
 }
 
 function setupCanvas () {
@@ -136,21 +174,15 @@ function setupCanvas () {
 
 function draw () {
   window.requestAnimationFrame(draw)
+  writeFeedbackText()
+  writeGameText()
   setupCanvas()
-  writeText()
   context.clearRect(0, 0, 100, 100)
-  drawPayoffLines()
+  drawIndicator()
+  if (round > 0) {
+    drawPayoffLines()
+  }
   drawAxes()
-  /*
-  context.beginPath()
-  context.lineWidth = 0.3
-  context.strokeStyle = 'rgba(0, 100, 255, 1)'
-  context.moveTo(graphOrigin.x, y)
-  context.lineTo(x, y)
-  context.moveTo(x, graphOrigin.y + graphSize)
-  context.lineTo(x, y)
-  context.stroke()
-  */
 }
 
 function drawAxes () {
@@ -160,7 +192,7 @@ function drawAxes () {
   context.lineCap = 'round'
   context.beginPath()
   context.rect(graphOrigin.x, graphOrigin.y, graphSize, graphSize)
-  const nticks = 4
+  const nticks = 10
   const ticklength = 2
   const graphLeft = graphOrigin.x
   const graphBottom = graphOrigin.y + graphSize
@@ -174,12 +206,13 @@ function drawAxes () {
   })
   context.stroke()
   context.beginPath()
-  const xMax = role === 'receiver' ? maxEstimate : 100
-  context.font = '0.3vh sans-serif'
+  context.font = '0.25vh sans-serif'
   context.textAlign = 'center'
   context.textBaseline = 'top'
   range(nticks + 1).forEach(i => {
-    const label = (xMax * i / nticks).toFixed(0)
+    const label = role === 'producer'
+      ? (maxAction * i / nticks).toFixed(0)
+      : '$' + (maxAction * i / nticks).toFixed(2)
     context.fillText(label, graphLeft + graphSize * i / nticks, graphBottom + ticklength + 1)
   })
   context.textAlign = 'right'
@@ -192,64 +225,81 @@ function drawAxes () {
 }
 
 function drawPayoffLines () {
-  if (role === 'sender') drawSenderPayoffLines()
-  if (role === 'receiver') drawReceiverPayoffLines()
+  if (round > 1) {
+    if (role === 'producer') drawProducerPayoffLines()
+    if (role === 'buyer') drawBuyerPayoffLines()
+  }
 }
 
-function drawSenderPayoffLines () {
-  const steps = 100
-  const certRateVec = range(steps + 1).map(i => i / steps)
-  const payVec = certRateVec.map(certRate => getSenderPayoff(certRate, type, meanEstimates))
-  maxPay = Math.ceil(Math.max(...payVec) + 0.5)
-  minPay = Math.floor(Math.max(0, Math.min(...payVec) - 0.5))
-  payoff = getSenderPayoff(strategy, type, meanEstimates)
-  context.lineWidth = 1
-  context.lineCap = 'round'
-  context.strokeStyle = 'rgb(0,100,255)'
+function drawIndicator () {
+  context.lineWidth = 2
+  context.lineCap = 'flat'
+  context.strokeStyle = 'rgb(210,210,210)'
   const graphLeft = graphOrigin.x
   const graphBottom = graphOrigin.y + graphSize
   context.beginPath()
-  const x = graphLeft + graphSize * strategy
-  const y = graphBottom - graphSize * (payoff - minPay) / (maxPay - minPay)
+  const x = graphLeft + graphSize * action / maxAction
   context.moveTo(x, graphBottom)
-  context.lineTo(x, y)
-  context.stroke()
-  context.strokeStyle = 'rgb(0,200,0)'
-  context.beginPath()
-  context.moveTo(graphLeft, graphBottom - graphSize * (payVec[0] - minPay) / (maxPay - minPay))
-  range(steps).map(i => i + 1).forEach(i => {
-    const x = graphLeft + graphSize * certRateVec[i]
-    const y = graphBottom - graphSize * (payVec[i] - minPay) / (maxPay - minPay)
-    context.lineTo(x, y)
-  })
+  context.lineTo(x, graphBottom - graphSize)
   context.stroke()
 }
 
-function drawReceiverPayoffLines () {
-  const steps = 100
-  const estimateVec = range(steps + 1).map(i => i * maxEstimate / steps)
-  const payVec = estimateVec.map(estimate => getReceiverPayoff(estimate, type, meanCertRates))
-  maxPay = Math.ceil(Math.max(...payVec) + 0.01)
-  minPay = Math.floor(Math.max(0, Math.min(...payVec) - 0.01))
-  payoff = getReceiverPayoff(strategy, type, meanCertRates)
+function drawProducerPayoffLines () {
+  const oldPrice = Math.max(oldBids[1], oldBids[2])
+  const leftPay = 15
+  const rightPay = getProducerPayoff(maxAction, type, oldPrice)
+  maxPay = Math.max(leftPay, rightPay) + 1
+  minPay = Math.min(leftPay, rightPay) - 1
   context.lineWidth = 1
+  context.lineJoin = 'round'
   context.lineCap = 'round'
-  context.strokeStyle = 'rgb(0,100,255)'
   const graphLeft = graphOrigin.x
+  const graphRight = graphLeft + graphSize
   const graphBottom = graphOrigin.y + graphSize
+  context.strokeStyle = 'rgb(0,200,0)'
   context.beginPath()
-  const x = graphLeft + graphSize * strategy / maxEstimate
-  const y = graphBottom - graphSize * (payoff - minPay) / (maxPay - minPay)
+  context.moveTo(graphLeft, graphBottom - graphSize * (leftPay - minPay) / (maxPay - minPay))
+  context.lineTo(graphRight, graphBottom - graphSize * (rightPay - minPay) / (maxPay - minPay))
+  context.stroke()
+  context.strokeStyle = 'rgb(0,100,255)'
+  context.beginPath()
+  const x = graphLeft + graphSize * oldAction / maxAction
+  const y = graphBottom - graphSize * (oldPayoff - minPay) / (maxPay - minPay)
   context.moveTo(x, graphBottom)
   context.lineTo(x, y)
   context.stroke()
+}
+
+function drawBuyerPayoffLines () {
+  const otherType = type === 1 ? 2 : 1
+  const otherBid = oldBids[otherType]
+  const underBid = Math.max(0, otherBid - 0.01)
+  const outBid = Math.min(maxBid, otherBid + 0.01)
+  const leftPay = getBuyerPayoff(0, otherBid, oldQuantities[1], oldQuantities[2])
+  const tiePay = getBuyerPayoff(otherBid, otherBid, oldQuantities[1], oldQuantities[2])
+  const outPay = getBuyerPayoff(outBid, otherBid, oldQuantities[1], oldQuantities[2])
+  const rightPay = getBuyerPayoff(maxBid, otherBid, oldQuantities[1], oldQuantities[2])
+  maxPay = Math.ceil(Math.max(leftPay, tiePay, outPay, rightPay) + 1)
+  minPay = Math.floor(Math.min(leftPay, tiePay, outPay, rightPay) - 1)
+  context.lineWidth = 1
+  context.lineJoin = 'round'
+  context.lineCap = 'round'
+  const graphLeft = graphOrigin.x
+  const graphRight = graphLeft + graphSize
+  const graphBottom = graphOrigin.y + graphSize
   context.strokeStyle = 'rgb(0,200,0)'
   context.beginPath()
-  context.moveTo(graphLeft, graphBottom - graphSize * (payVec[0] - minPay) / (maxPay - minPay))
-  range(steps).map(i => i + 1).forEach(i => {
-    const x = graphLeft + graphSize * estimateVec[i] / maxEstimate
-    const y = graphBottom - graphSize * (payVec[i] - minPay) / (maxPay - minPay)
-    context.lineTo(x, y)
-  })
+  context.moveTo(graphLeft, graphBottom - graphSize * (leftPay - minPay) / (maxPay - minPay))
+  context.lineTo(graphLeft + graphSize * underBid / maxBid, graphBottom - graphSize * (leftPay - minPay) / (maxPay - minPay))
+  context.lineTo(graphLeft + graphSize * otherBid / maxBid, graphBottom - graphSize * (tiePay - minPay) / (maxPay - minPay))
+  context.lineTo(graphLeft + graphSize * outBid / maxBid, graphBottom - graphSize * (outPay - minPay) / (maxPay - minPay))
+  context.lineTo(graphRight, graphBottom - graphSize * (rightPay - minPay) / (maxPay - minPay))
+  context.stroke()
+  context.strokeStyle = 'rgb(0,100,255)'
+  context.beginPath()
+  const x = graphLeft + graphSize * oldAction / maxAction
+  const y = graphBottom - graphSize * (oldPayoff - minPay) / (maxPay - minPay)
+  context.moveTo(x, graphBottom)
+  context.lineTo(x, y)
   context.stroke()
 }

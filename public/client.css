@@ -27,15 +27,14 @@ body {
 #instructionsDiv {
   display: none;
   text-align: justify;      
-  font: 3vmin monospace;    
+  font: 2vmin monospace;    
   border: 0;
   padding-top: 20;
-  padding-left: 100;
-  padding-right: 100;
-  margin: 0;
-  float: right;  
+  padding-left: 5vh;
+  padding-right: 5vh;
+  margin: auto;
 }
-#interfaceDiv {
+#gameDiv {
   display: none; /* flex; */
   justify-content: center;
   height: 100%;
@@ -54,8 +53,8 @@ body {
 }
 canvas {
   border: 1px solid hsl(180, 10%, 10%);
-  width: 80vh;
-  height: 80vh;
+  width: 85vh;
+  height: 85vh;
 }
 #belowDiv {
   display: flex;
@@ -89,6 +88,17 @@ canvas {
   padding: 0vh;
   width: 20vh;
   font-size: 2.3vh;
+}
+#feedbackDiv {
+  display: none;
+  text-align: center;      
+  font: 4vmin monospace;    
+  border: 0;
+  padding-top: 10vh;
+  padding-left: 100;
+  padding-right: 100;
+  margin: 0;
+  width: 100vw;
 }
 span {
   display: block;

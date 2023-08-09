@@ -1,10 +1,14 @@
 import server from './server.js'
+import { setTreatment, getProducerPayoff, getBuyerPayoff } from './public/payoffs.js'
 
 function range (n) { return [...Array(n).keys()] }
 function sum (a) { return a.reduce((x, y) => x + y, 0) }
 function mean (a) {
   if (a.length === 0) return 0
   else return sum(a) / a.length
+}
+function unique (a) {
+  return Array.from(new Set(a))
 }
 function shuffled (a) {
   const indices = range(a.length)
@@ -13,27 +17,38 @@ function shuffled (a) {
   return indices.map(i => a[i])
 }
 
-const updateInterval = 0.1
 const subjects = {}
-const meanEstimates = { 1: 0, 2: 0 }
-const meanCertRates = { 1: 0, 2: 0 }
+const dt = 0.1
+const firstRoundTime = 5
+const roundTime = 1
+const maxRound = 60
+const maxPeriod = 10
+const feedbackTime = 10
 
 let state = 'instructions'
+let practice = true
+let practiceComplete = false
 let showInstructions = false
-const treatment = 1
+let treatment = 1
+let period = 0
+let round = 0
+let timer = 0
 
 const io = server.start(() => {
   console.log('Server started')
-  setInterval(update, updateInterval * 1000)
+  setInterval(update, dt * 1000)
 })
 
 io.on('connection', socket => {
   console.log('connection:', socket.id)
   socket.emit('connected', {})
   socket.on('managerUpdateServer', msg => {
+    treatment = msg.treatment
+    setTreatment(treatment)
     const reply = {
       subjects: Object.values(subjects),
-      state
+      state,
+      practiceComplete
     }
     socket.emit('serverUpdateManager', reply)
   })
@@ -47,31 +62,39 @@ io.on('connection', socket => {
       showInstructions = false
     }
   })
+  socket.on('setupGroups', msg => {
+    setupGroups()
+  })
   socket.on('startPractice', msg => {
-    assignRoles()
     if (state === 'instructions') {
-      state = 'practice'
+      startPractice()
     }
   })
-  socket.on('endPractice', msg => {
-    if (state === 'practice') {
-      state = 'instructions'
+  socket.on('startExperiment', msg => {
+    if (state === 'instructions') {
+      startExperiment()
     }
   })
   socket.on('clientUpdateServer', msg => {
     if (!subjects[msg.id]) createSubject(msg.id)
     const subject = subjects[msg.id]
-    subject.strategy = msg.strategy
+    subject.action = msg.action
     const reply = {
       id: msg.id,
       treatment,
       state,
+      practice,
+      period,
+      round,
+      timer,
       showInstructions,
       role: subject.role,
       type: subject.type,
-      oldStrategy: subject.oldStrategy,
-      meanCertRates,
-      meanEstimates
+      oldAction: subject.oldAction,
+      oldPayoff: subject.oldPayoff,
+      oldBids: subject.oldBids,
+      oldQuantities: subject.oldQuantities,
+      periodPayoff: subject.periodPayoff
     }
     socket.emit('serverUpdateClient', reply)
   })
@@ -80,35 +103,138 @@ io.on('connection', socket => {
 function createSubject (id) {
   const subject = {
     id,
-    role: 'buyer',
+    group: 0,
+    role: 'none',
     type: 0,
-    strategy: 0.5,
-    oldStrategy: 0.5,
-    payoff: 0
+    action: 0.5,
+    oldAction: 0.5,
+    oldPayoff: 0,
+    oldBids: { 1: 0, 2: 0 },
+    oldQuantities: { 1: 0, 2: 0 },
+    periodPayoff: 0,
+    roundPayHist: [],
+    periodPayHist: []
   }
   subjects[id] = subject
+}
+
+function setupGroups () {
+  console.log('setupGroups')
+  const shuffledSubjects = shuffled(Object.values(subjects))
+  shuffledSubjects.forEach((subject, index) => {
+    subject.group = Math.floor(index / 4) + 1
+  })
 }
 
 function assignRoles () {
   // const shuffledSubjects = shuffled(Object.values(subjects))
   const shuffledSubjects = Object.values(subjects).map(s => s)
-  shuffledSubjects.forEach((subject, index) => {
-    subject.role = Math.floor(0.5 * index) % 2 === 0 ? 'sender' : 'receiver'
-    subject.type = 1 + (index % 2)
+  const groups = unique(shuffledSubjects.map(s => s.group))
+  groups.forEach(group => {
+    const groupSubjects = shuffledSubjects.filter(s => s.group === group)
+    groupSubjects.forEach((subject, index) => {
+      subject.role = Math.floor(0.5 * index) % 2 === 0 ? 'producer' : 'buyer'
+      subject.type = 1 + (index % 2)
+    })
   })
 }
 
-function calculateAverages () {
-  const senders = Object.values(subjects).filter(s => s.role === 'sender')
-  meanCertRates[1] = mean(senders.filter(s => s.type === 1).map(s => s.strategy))
-  meanCertRates[2] = mean(senders.filter(s => s.type === 2).map(s => s.strategy))
-  const receivers = Object.values(subjects).filter(s => s.role === 'receiver')
-  const receivers1 = receivers.filter(b => b.type === 1)
-  const receivers2 = receivers.filter(b => b.type === 2)
-  meanEstimates[1] = mean(receivers1.map(receiver => receiver.strategy))
-  meanEstimates[2] = mean(receivers2.map(receiver => receiver.strategy))
+function getGroupQuantities (group) {
+  const groupSubjects = Object.values(subjects).filter(s => s.group === group)
+  const producer1 = groupSubjects.filter(s => s.role === 'producer' && s.type === 1)[0]
+  const producer2 = groupSubjects.filter(s => s.role === 'producer' && s.type === 2)[0]
+  return { 1: producer1.action, 2: producer2.action }
+}
+
+function getGroupBids (group) {
+  const groupSubjects = Object.values(subjects).filter(s => s.group === group)
+  const buyer1 = groupSubjects.filter(s => s.role === 'buyer' && s.type === 1)[0]
+  const buyer2 = groupSubjects.filter(s => s.role === 'buyer' && s.type === 2)[0]
+  return { 1: buyer1.action, 2: buyer2.action }
+}
+
+function startPractice () {
+  assignRoles()
+  state = 'game'
+  practice = true
+  period = 0
+  startPeriod()
+}
+
+function startExperiment () {
+  assignRoles()
+  state = 'game'
+  practice = false
+  period = 1
+  startPeriod()
+}
+
+function startPeriod () {
+  round = 1
+  timer = firstRoundTime
+  assignRoles()
+  Object.values(subjects).forEach(subject => {
+    subject.roundPayHist = []
+  })
+}
+
+function endRound () {
+  Object.values(subjects).forEach(subject => {
+    subject.oldAction = subject.action
+    subject.oldBids = getGroupBids(subject.group)
+    subject.oldQuantities = getGroupQuantities(subject.group)
+    const price = Math.max(subject.oldBids[1], subject.oldBids[2])
+    if (subject.role === 'producer') {
+      subject.oldPayoff = getProducerPayoff(subject.oldAction, subject.type, price)
+    }
+    if (subject.role === 'buyer') {
+      const otherType = subject.type === 1 ? 2 : 1
+      const otherBid = subject.oldBids[otherType]
+      subject.oldPayoff = getBuyerPayoff(subject.oldAction, otherBid, subject.oldQuantities[1], subject.oldQuantities[2])
+    }
+    subject.roundPayHist.push(subject.oldPayoff)
+  })
+}
+
+function endPeriod () {
+  if (practice) {
+    practiceComplete = true
+  } else {
+    Object.values(subjects).forEach(subject => {
+      subject.periodPayoff = mean(subject.roundPayHist)
+      subject.periodPayHist.push(subject.periodPayoff)
+    })
+  }
+}
+
+function endGame () {
+  //
 }
 
 function update () {
-  calculateAverages()
+  timer = Math.max(0, timer - dt)
+  if (state === 'game') {
+    // console.log(period, round, timer)
+    if (timer <= 0) {
+      endRound()
+      round += 1
+      timer = roundTime
+    }
+    if (round > maxRound) {
+      endPeriod()
+      state = 'feedback'
+      timer = feedbackTime
+    }
+  }
+  if (state === 'feedback') {
+    if (timer <= 0) {
+      if (practice) state = 'instructions'
+      else {
+        state = 'game'
+        period += 1
+        if (period > maxPeriod) endGame()
+        else startPeriod()
+      }
+    }
+  }
 }

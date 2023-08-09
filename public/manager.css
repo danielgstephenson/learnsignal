@@ -34,6 +34,9 @@ body {
   border: 0px solid;
   padding-right: 3vw;
 }
+#actions {
+  font: 1.5vw monospace;
+}
 button {
   font-size: 1.5vw;
   padding: 0.1vw;

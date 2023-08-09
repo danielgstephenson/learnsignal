@@ -10,11 +10,20 @@
     <div id="interfaceDiv">
       <table id = "subjectsTable"></table>
       <div id="actions">
-        <div id="stateDiv"></div>
+        <div id="stateDiv"></div><br>
+        <input type="radio" id="treatmentLVLCRadio" name="treatment" value="LVHC" checked>
+        <label for="treatmentLVLCRadio">Low Value, Low Cost</label><br>
+        <input type="radio" id="treatmentLVHCRadio" name="treatment" value="LVLC">
+        <label for="treatmentLVHCRadio">Low Value, High Cost</label><br>
+        <input type="radio" id="treatmentHVLCRadio" name="treatment" value="HVHC">
+        <label for="treatmentHVLCRadio">High Value, Low Cost</label><br>
+        <input type="radio" id="treatmentHVHCRadio" name="treatment" value="HVLC">
+        <label for="treatmentHVHCRadio">High Value, High Cost</label><br><br>
         <button id="showInstructionsButton" onclick="showInstructions()">Show Instructions</button><br>
         <button id="hideInstructionsButton" onclick="hideInstructions()">Hide Instructions</button><br>
+        <button id="setupGroupsButton" onclick="setupGroups()">Setup Groups</button><br>
         <button id="startPracticeButton" onclick="startPractice()">Start Practice</button><br>
-        <button id="endPracticeButton" onclick="endPractice()">End Practice</button><br>
+        <button id="startExperimentButton" onclick="startExperiment()">Start Experiment</button><br>
       </div>
     </div>
     <script src="manager.js" type="module"></script>
