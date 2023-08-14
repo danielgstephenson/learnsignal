@@ -25,7 +25,7 @@ const capacity = 10
 let message = {}
 let state = 'join'
 let practice = true
-let round = 1
+let period = 1
 let timer = 0
 let joined = false
 let id = 0
@@ -38,7 +38,7 @@ let oldAction = 0
 let oldPayoff = 0
 let oldBids = { 1: 0, 2: 0 }
 let oldQuantities = { 1: 0, 2: 0 }
-let periodPayoff = 0
+let roundPayoff = 0
 let maxAction = 1
 let maxPay = 20
 let minPay = 0
@@ -70,14 +70,14 @@ socket.on('serverUpdateClient', msg => {
   role = msg.role
   type = msg.type
   showInstructions = msg.showInstructions
-  round = msg.round
+  period = msg.period
   timer = msg.timer
   treatment = msg.treatment
   oldAction = msg.oldAction
   oldPayoff = msg.oldPayoff
   oldBids = msg.oldBids
   oldQuantities = msg.oldQuantities
-  periodPayoff = msg.periodPayoff
+  roundPayoff = msg.roundPayoff
   setTreatment(treatment)
   maxAction = role === 'buyer' ? maxBid : capacity
   instructionsDiv.innerHTML = getInstructions()
@@ -127,7 +127,7 @@ function writeGameText () {
   if (role === 'buyer') {
     aboveInnerHTML += 'You are a Buyer.'
   }
-  if (round > 1) {
+  if (period > 1) {
     if (role === 'buyer') {
       belowLeftInnerHTML += `Your Bid: $${oldAction.toFixed(2)}<br>`
       belowRightInnerHTML += `Your Payoff: $${oldPayoff.toFixed(2)}<br>`
@@ -137,9 +137,9 @@ function writeGameText () {
       belowRightInnerHTML += `Your Payoff: $${oldPayoff.toFixed(2)}<br>`
     }
   } else {
-    belowLeftInnerHTML = 'This is the first round.'
+    belowLeftInnerHTML = 'This is the first period.'
     const s = Math.ceil(timer) > 1 ? 's' : ''
-    belowRightInnerHTML += `Next round in ${Math.ceil(timer).toFixed(0)} second${s}. <br>`
+    belowRightInnerHTML += `Next period in ${Math.ceil(timer).toFixed(0)} second${s}. <br>`
   }
   belowLeftDiv.innerHTML = belowLeftInnerHTML
   belowRightDiv.innerHTML = belowRightInnerHTML
@@ -149,10 +149,10 @@ function writeGameText () {
 function writeFeedbackText () {
   let feedbackInnerHTML = ''
   if (practice) {
-    feedbackInnerHTML += 'This was a practice period. <br><br>'
-    feedbackInnerHTML += 'It will not effect your final payment. <br> <br>'
+    feedbackInnerHTML += 'This was a practice round. <br><br>'
+    feedbackInnerHTML += 'It will not effect your final earnings. <br> <br>'
   }
-  feedbackInnerHTML += `In this period, your average payoff was $${periodPayoff.toFixed(2)} <br> <br>`
+  feedbackInnerHTML += `Your average payoff in this round was $${roundPayoff.toFixed(2)} <br> <br>`
   const s = Math.ceil(timer) > 1 ? 's' : ''
   if (practice) {
     feedbackInnerHTML += `The instructions will return in ${Math.ceil(timer).toFixed(0)} second${s}. <br>`
@@ -179,7 +179,7 @@ function draw () {
   setupCanvas()
   context.clearRect(0, 0, 100, 100)
   drawIndicator()
-  if (round > 0) {
+  if (period > 0) {
     drawPayoffLines()
   }
   drawAxes()
@@ -225,7 +225,7 @@ function drawAxes () {
 }
 
 function drawPayoffLines () {
-  if (round > 1) {
+  if (period > 1) {
     if (role === 'producer') drawProducerPayoffLines()
     if (role === 'buyer') drawBuyerPayoffLines()
   }

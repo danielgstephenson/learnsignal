@@ -30,8 +30,8 @@ let practice = true
 let practiceComplete = false
 let showInstructions = false
 let treatment = 1
-let period = 0
 let round = 0
+let period = 0
 let timer = 0
 
 const io = server.start(() => {
@@ -85,7 +85,6 @@ io.on('connection', socket => {
       state,
       practice,
       period,
-      round,
       timer,
       showInstructions,
       role: subject.role,
@@ -94,7 +93,7 @@ io.on('connection', socket => {
       oldPayoff: subject.oldPayoff,
       oldBids: subject.oldBids,
       oldQuantities: subject.oldQuantities,
-      periodPayoff: subject.periodPayoff
+      roundPayoff: subject.roundPayoff
     }
     socket.emit('serverUpdateClient', reply)
   })
@@ -111,9 +110,9 @@ function createSubject (id) {
     oldPayoff: 0,
     oldBids: { 1: 0, 2: 0 },
     oldQuantities: { 1: 0, 2: 0 },
-    periodPayoff: 0,
-    roundPayHist: [],
-    periodPayHist: []
+    periodPayHist: [],
+    roundPayoff: 0,
+    roundPayHist: []
   }
   subjects[id] = subject
 }
@@ -157,28 +156,28 @@ function startPractice () {
   assignRoles()
   state = 'game'
   practice = true
-  period = 0
-  startPeriod()
+  round = 0
+  startRound()
 }
 
 function startExperiment () {
   assignRoles()
   state = 'game'
   practice = false
-  period = 1
-  startPeriod()
+  round = 1
+  startRound()
 }
 
-function startPeriod () {
-  round = 1
+function startRound () {
+  period = 1
   timer = firstRoundTime
   assignRoles()
   Object.values(subjects).forEach(subject => {
-    subject.roundPayHist = []
+    subject.periodPayHist = []
   })
 }
 
-function endRound () {
+function endPeriod () {
   Object.values(subjects).forEach(subject => {
     subject.oldAction = subject.action
     subject.oldBids = getGroupBids(subject.group)
@@ -192,17 +191,19 @@ function endRound () {
       const otherBid = subject.oldBids[otherType]
       subject.oldPayoff = getBuyerPayoff(subject.oldAction, otherBid, subject.oldQuantities[1], subject.oldQuantities[2])
     }
-    subject.roundPayHist.push(subject.oldPayoff)
+    subject.periodPayHist.push(subject.oldPayoff)
   })
 }
 
-function endPeriod () {
+function endRound () {
+  Object.values(subjects).forEach(subject => {
+    subject.roundPayoff = mean(subject.periodPayHist)
+  })
   if (practice) {
     practiceComplete = true
   } else {
     Object.values(subjects).forEach(subject => {
-      subject.periodPayoff = mean(subject.roundPayHist)
-      subject.periodPayHist.push(subject.periodPayoff)
+      subject.roundPayHist.push(subject.periodPayoff)
     })
   }
 }
@@ -216,12 +217,12 @@ function update () {
   if (state === 'game') {
     // console.log(period, round, timer)
     if (timer <= 0) {
-      endRound()
-      round += 1
+      endPeriod()
+      period += 1
       timer = roundTime
     }
-    if (round > maxRound) {
-      endPeriod()
+    if (period > maxRound) {
+      endRound()
       state = 'feedback'
       timer = feedbackTime
     }
@@ -231,9 +232,9 @@ function update () {
       if (practice) state = 'instructions'
       else {
         state = 'game'
-        period += 1
-        if (period > maxPeriod) endGame()
-        else startPeriod()
+        round += 1
+        if (round > maxPeriod) endGame()
+        else startRound()
       }
     }
   }
