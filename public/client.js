@@ -15,7 +15,7 @@ const aboveDiv = document.getElementById('aboveDiv')
 const belowLeftDiv = document.getElementById('belowLeftDiv')
 const belowRightDiv = document.getElementById('belowRightDiv')
 
-const updateInterval = 0.1
+const updateInterval = 0.02
 const mouse = { x: 0, y: 0, gx: 0, gy: 0 }
 const graphSize = 80
 const graphOrigin = { x: 13, y: 6 }

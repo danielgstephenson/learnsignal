@@ -19,9 +19,9 @@ function shuffled (a) {
 
 const subjects = {}
 const dt = 0.1
-const firstRoundTime = 5
-const roundTime = 1
-const maxRound = 60
+const firstRoundTime = 1
+const roundTime = 0.02 // 1
+const maxRound = 6000 // 60
 const maxPeriod = 10
 const feedbackTime = 10
 
