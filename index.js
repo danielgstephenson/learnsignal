@@ -215,7 +215,6 @@ function endGame () {
 function update () {
   timer = Math.max(0, timer - dt)
   if (state === 'game') {
-    // console.log(period, round, timer)
     if (timer <= 0) {
       endPeriod()
       period += 1
